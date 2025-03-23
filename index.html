@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iPhone Style Interface - With Drawing</title>
+  <style>
+    /* Global styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    }
+    /* iPhone container */
+    .iphone {
+      position: relative;
+      width: 360px;
+      height: 720px;
+      background: #1c1c1e;
+      border-radius: 40px;
+      box-shadow: 0 0 30px rgba(255,255,255,0.8),
+                  0 0 60px rgba(255,255,255,0.5);
+      overflow: hidden;
+    }
+    /* Notch simulation */
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      height: 30px;
+      background: #000;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      z-index: 2;
+    }
+    /* Screen styling */
+    .screen {
+      position: absolute;
+      top: 40px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      background: #000;
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: inset 0 4px 15px rgba(255,255,255,0.1);
+      transition: background 0.5s ease, transform 0.5s ease;
+    }
+    /* Boot state */
+    .screen.on {
+      background: linear-gradient(135deg, #1c1c1e, #2c2c2e);
+    }
+    /* Home screen wallpaper */
+    .screen.home-active {
+      background: url('https://wallpapers.ispazio.net/wp-content/uploads/2024/06/iOS18-Pink-164x355.png?x50069')
+                  center/cover no-repeat;
+    }
+    .screen.off {
+      background: #000;
+    }
+    /* Boot container – centered */
+    #boot-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: block;
+    }
+    .boot-logo img {
+      max-width: 100px;
+      display: block;
+      margin: 0 auto;
+    }
+    /* Home Screen container */
+    #home-screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      box-sizing: border-box;
+    }
+    /* Status bar: displays current time */
+    .status-bar {
+      width: 100%;
+      height: 20px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0 10px;
+      color: #fff;
+      font-size: 0.8rem;
+    }
+    /* Home Apps Header – contains app icons */
+    .home-apps {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      gap: 10px;
+    }
+    .app-icon {
+      width: 60px;
+      height: 60px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .app-icon img {
+      max-width: 70%;
+      max-height: 70%;
+    }
+    /* Common styling for app UIs */
+    .calculator,  .drawing {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #fff;
+    }
+    /* App header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: #111;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    /* Safari header with address bar */
+    .safari-header {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: #111;
+      gap: 5px;
+    }
+    .safari-header input {
+      flex: 1;
+      padding: 5px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    .safari-header button {
+      padding: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    /* App body */
+    .app-body {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    /* Calculator specifics */
+    .calc-display {
+      background: #000;
+      color: #fff;
+      text-align: right;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      min-height: 60px;
+      border: 1px solid #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 2.5rem;
+      transition: font-size 0.2s;
+    }
+    .calc-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .calc-button {
+      background: #333;
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 1.2rem;
+      padding: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .calc-button.operator {
+      background: orange;
+    }
+    .calc-button.zero {
+      grid-column: span 2;
+      border-radius: 40px;
+    }
+    .calc-button:hover {
+      background: #555;
+    }
+    /* Safari body: iframe */
+    .safari-body {
+      flex: 1;
+      padding: 0;
+      margin: 0;
+    }
+    .safari-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* Drawing app body: canvas and color picker */
+    .drawing-body {
+      flex: 1;
+      padding: 10px;
+      margin: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    #drawing-canvas {
+      border: 1px solid #333;
+      border-radius: 10px;
+      width: 100%;
+      flex: 1;
+      background: #fff;
+      cursor: crosshair;
+    }
+    .color-picker {
+      margin-top: 5px;
+      align-self: center;
+    }
+    /* App footer with back button (and Clear button for drawing) */
+    .app-footer {
+      padding: 10px;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .back-button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .clear-button {
+      background: none;
+      border: 1px solid #fff;
+      color: #fff;
+      font-size: 1.2rem;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    /* --- Custom Animations --- */
+    /* Calculator: Zoom in/out */
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes zoomOut {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(0.9); }
+    }
+    .calc-anim-in {
+      animation: zoomIn 0.5s ease-out forwards;
+    }
+    .calc-anim-out {
+      animation: zoomOut 0.5s ease-out forwards;
+    }
+    /* Safari: Slide up/down */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30%); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(30%); }
+    }
+    .safari-anim-in {
+      animation: slideUp 0.5s ease-out forwards;
+    }
+    .safari-anim-out {
+      animation: slideDown 0.5s ease-out forwards;
+    }
+    /* Drawing: Fade in/out */
+    @keyframes fadeInApp {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes fadeOutApp {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    .drawing-anim-in {
+      animation: fadeInApp 0.5s ease-out forwards;
+    }
+    .drawing-anim-out {
+      animation: fadeOutApp 0.5s ease-out forwards;
+    }
+    /* Power button styling */
+    .power-button {
+      position: absolute;
+      right: -8px;
+      top: 40%;
+      width: 12px;
+      height: 60px;
+      background: linear-gradient(180deg, #fff, #ccc);
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(255,255,255,0.6);
+      cursor: pointer;
+      z-index: 3;
+      transition: transform 0.2s ease;
+    }
+    .power-button:active {
+      transform: scale(0.95);
+    }
+    /* Home indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 5px;
+      background: #444;
+      border-radius: 3px;
+      opacity: 0.7;
+    }
+    /* Power on animation */
+    @keyframes powerOn {
+      0% { transform: scale(0.95); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-power {
+      animation: powerOn 0.8s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="iphone">
+    <div class="notch"></div>
+    <div class="screen off" id="screen">
+      <!-- Boot Container: visible only during boot -->
+      <div id="boot-container">
+        <div class="boot-logo">
+          <img src="https://img.icons8.com/?size=100&id=30840&format=png&color=FFFFFF" alt="Boot Logo" />
+        </div>
+      </div>
+      <!-- Home Screen Container -->
+      <div id="home-screen">
+        <div class="status-bar">
+          <time id="current-time"></time>
+        </div>
+        <!-- Home Apps Header: Calculator, Safari, Drawing icons -->
+        <div class="home-apps">
+          <div class="app-icon" id="calculator-icon">
+            <img src="https://cdn.iconscout.com/icon/free/png-256/calculator-1859951-1575939.png" alt="Calculator App" />
+          </div>
+          <div class="app-icon" id="drawing-icon">
+            <img src="https://img.icons8.com/ios-filled/50/ffffff/drawing.png" alt="Drawing App" />
+          </div>
+        </div>
+      </div>
+      <!-- Calculator UI Container -->
+      <div class="calculator" id="calculator">
+        <div class="app-header">
+          <span class="calc-title">Calculator</span>
+        </div>
+        <div class="app-body">
+          <div class="calc-display" id="calc-display">0</div>
+          <div class="calc-buttons">
+            <button class="calc-button">AC</button>
+            <button class="calc-button">+/-</button>
+            <button class="calc-button">%</button>
+            <button class="calc-button operator">÷</button>
+            <button class="calc-button">7</button>
+            <button class="calc-button">8</button>
+            <button class="calc-button">9</button>
+            <button class="calc-button operator">×</button>
+            <button class="calc-button">4</button>
+            <button class="calc-button">5</button>
+            <button class="calc-button">6</button>
+            <button class="calc-button operator">−</button>
+            <button class="calc-button">1</button>
+            <button class="calc-button">2</button>
+            <button class="calc-button">3</button>
+            <button class="calc-button operator">+</button>
+            <button class="calc-button zero">0</button>
+            <button class="calc-button">.</button>
+            <button class="calc-button operator">=</button>
+          </div>
+        </div>
+        <div class="app-footer">
+          <button class="back-button" id="calc-back">← Home</button>
+        </div>
+      </div>
+
+      <!-- Drawing UI Container -->
+      <div class="drawing" id="drawing">
+        <div class="app-header">
+          <span class="drawing-title">Drawing</span>
+          <!-- Color Picker for drawing -->
+          <input type="color" id="drawing-color" class="color-picker" value="#000000" />
+        </div>
+        <div class="app-body drawing-body">
+          <canvas id="drawing-canvas"></canvas>
+        </div>
+        <div class="app-footer">
+          <button class="back-button" id="drawing-back">← Home</button>
+          <button class="clear-button" id="drawing-clear">Clear</button>
+        </div>
+      </div>
+      <p class="status" id="status-text"></p>
+    </div>
+    <div class="power-button" id="power-button"></div>
+    <div class="home-indicator"></div>
+  </div>
+
+  <script>
+    // Update current time in status bar
+    function updateTime() {
+      const timeElem = document.getElementById('current-time');
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      timeElem.textContent = `${hours}:${minutes} ${ampm}`;
+    }
+    updateTime();
+    setInterval(updateTime, 60000);
+    
+    // Elements
+    const powerButton = document.getElementById('power-button');
+    const screen = document.getElementById('screen');
+    const bootContainer = document.getElementById('boot-container');
+    const homeScreen = document.getElementById('home-screen');
+    const calculator = document.getElementById('calculator');
+    const drawing = document.getElementById('drawing');
+    const calcDisplay = document.getElementById('calc-display');
+    const statusText = document.getElementById('status-text');
+    const calculatorIcon = document.getElementById('calculator-icon');
+    const drawingIcon = document.getElementById('drawing-icon');
+    const calcBack = document.getElementById('calc-back');
+    const drawingBack = document.getElementById('drawing-back');
+    const drawingClear = document.getElementById('drawing-clear');
+    const drawingColor = document.getElementById('drawing-color');
+
+    let isOn = false;
+    
+    // Calculator state
+    let currentInput = '';
+    let previousInput = '';
+    let operator = '';
+    
+    function updateDisplay() {
+      const displayText = currentInput || '0';
+      calcDisplay.textContent = displayText;
+      if (displayText.length > 10) {
+        calcDisplay.style.fontSize = "1.8rem";
+      } else {
+        calcDisplay.style.fontSize = "2.5rem";
+      }
+    }
+    
+    // Calculator button events
+    const calcButtons = document.querySelectorAll('.calc-button');
+    calcButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const value = button.textContent.trim();
+        if (!isNaN(value) || value === '.') {
+          currentInput += value;
+          updateDisplay();
+        } else if (value === 'AC') {
+          currentInput = '';
+          previousInput = '';
+          operator = '';
+          updateDisplay();
+        } else if (value === '+/-') {
+          if (currentInput) {
+            currentInput = (-parseFloat(currentInput)).toString();
+            updateDisplay();
+          }
+        } else if (value === '%') {
+          if (currentInput) {
+            currentInput = (parseFloat(currentInput) / 100).toString();
+            updateDisplay();
+          }
+        } else if (['÷', '×', '−', '+'].includes(value)) {
+          if (currentInput === '' && previousInput === '') return;
+          if (currentInput !== '') {
+            previousInput = currentInput;
+            currentInput = '';
+          }
+          operator = value;
+        } else if (value === '=') {
+          if (previousInput !== '' && currentInput !== '' && operator) {
+            let result;
+            const a = parseFloat(previousInput);
+            const b = parseFloat(currentInput);
+            switch(operator) {
+              case '+': result = a + b; break;
+              case '−': result = a - b; break;
+              case '×': result = a * b; break;
+              case '÷': result = a / b; break;
+              default: result = b;
+            }
+            currentInput = result.toString();
+            previousInput = '';
+            operator = '';
+            updateDisplay();
+          }
+        }
+      });
+    });
+    
+    // Power button toggles phone on/off
+    powerButton.addEventListener('click', () => {
+      if (!isOn) {
+        screen.classList.remove('off');
+        screen.classList.add('on', 'animate-power');
+        statusText.textContent = 'Powering On';
+        bootContainer.style.display = 'block';
+        homeScreen.style.display = 'none';
+        calculator.style.display = 'none';
+        drawing.style.display = 'none';
+        setTimeout(() => {
+          bootContainer.style.display = 'none';
+          homeScreen.style.display = 'block';
+          screen.classList.remove('on');
+          screen.classList.add('home-active');
+          statusText.textContent = 'Phone Running';
+          screen.classList.remove('animate-power');
+        }, 1200);
+      } else {
+        screen.classList.add('animate-power');
+        statusText.textContent = 'Powering Off';
+        setTimeout(() => {
+          bootContainer.style.display = 'none';
+          homeScreen.style.display = 'none';
+          calculator.style.display = 'none';
+          drawing.style.display = 'none';
+          screen.classList.remove('home-active', 'animate-power');
+          screen.classList.add('off');
+          statusText.textContent = '';
+          currentInput = '';
+          previousInput = '';
+          operator = '';
+          updateDisplay();
+        }, 1200);
+      }
+      isOn = !isOn;
+    });
+    
+    // Open Calculator with zoom animation
+    calculatorIcon.addEventListener('click', () => {
+      homeScreen.classList.add('calc-anim-out');
+      setTimeout(() => {
+        homeScreen.style.display = 'none';
+        homeScreen.classList.remove('calc-anim-out');
+        calculator.style.display = 'flex';
+        calculator.classList.add('calc-anim-in');
+        setTimeout(() => {
+          calculator.classList.remove('calc-anim-in');
+        }, 500);
+        currentInput = '';
+        previousInput = '';
+        operator = '';
+        updateDisplay();
+      }, 300);
+    });
+    
+
+    
+    // Open Drawing with fade animation
+    drawingIcon.addEventListener('click', () => {
+      homeScreen.classList.add('drawing-anim-out');
+      setTimeout(() => {
+        homeScreen.style.display = 'none';
+        homeScreen.classList.remove('drawing-anim-out');
+        drawing.style.display = 'flex';
+        drawing.classList.add('drawing-anim-in');
+        setTimeout(() => {
+          drawing.classList.remove('drawing-anim-in');
+        }, 500);
+        // Set up canvas dimensions
+        const canvas = document.getElementById('drawing-canvas');
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        // Clear previous drawing
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }, 300);
+    });
+    
+    // Back button for Calculator
+    calcBack.addEventListener('click', () => {
+      calculator.classList.add('calc-anim-out');
+      setTimeout(() => {
+        calculator.style.display = 'none';
+        calculator.classList.remove('calc-anim-out');
+        homeScreen.style.display = 'block';
+        homeScreen.classList.add('calc-anim-in');
+        setTimeout(() => {
+          homeScreen.classList.remove('calc-anim-in');
+        }, 500);
+      }, 300);
+    });
+    
+
+    
+    // Back button for Drawing
+    drawingBack.addEventListener('click', () => {
+      drawing.classList.add('drawing-anim-out');
+      setTimeout(() => {
+        drawing.style.display = 'none';
+        drawing.classList.remove('drawing-anim-out');
+        homeScreen.style.display = 'block';
+        homeScreen.classList.add('drawing-anim-in');
+        setTimeout(() => {
+          homeScreen.classList.remove('drawing-anim-in');
+        }, 500);
+      }, 300);
+    });
+    
+
+    
+    // --- Drawing App Code ---
+    const drawingCanvas = document.getElementById('drawing-canvas');
+    const drawingCtx = drawingCanvas.getContext('2d');
+    let drawingActive = false;
+    
+    // Set initial drawing color
+    drawingCtx.strokeStyle = drawingColor.value;
+    
+    // Update stroke color when user selects a new color
+    drawingColor.addEventListener('input', () => {
+      drawingCtx.strokeStyle = drawingColor.value;
+    });
+    
+    function startDrawing(e) {
+      drawingActive = true;
+      draw(e);
+    }
+    function stopDrawing() {
+      drawingActive = false;
+      drawingCtx.beginPath();
+    }
+    function draw(e) {
+      if (!drawingActive) return;
+      const rect = drawingCanvas.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top;
+      if (e.touches) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+      }
+      drawingCtx.lineWidth = 2;
+      drawingCtx.lineCap = 'round';
+      drawingCtx.lineTo(x, y);
+      drawingCtx.stroke();
+      drawingCtx.beginPath();
+      drawingCtx.moveTo(x, y);
+    }
+    
+    drawingCanvas.addEventListener('mousedown', startDrawing);
+    drawingCanvas.addEventListener('mousemove', draw);
+    drawingCanvas.addEventListener('mouseup', stopDrawing);
+    drawingCanvas.addEventListener('mouseout', stopDrawing);
+    
+    drawingCanvas.addEventListener('touchstart', startDrawing);
+    drawingCanvas.addEventListener('touchmove', draw);
+    drawingCanvas.addEventListener('touchend', stopDrawing);
+    drawingCanvas.addEventListener('touchcancel', stopDrawing);
+    
+    drawingClear.addEventListener('click', () => {
+      drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+    });
+  </script>
+</body>
+</html>
