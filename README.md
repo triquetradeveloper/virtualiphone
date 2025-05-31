@@ -14,7 +14,7 @@ A fully interactive web-based simulation of an iPhone-style interface, complete 
 
 ## 🌐 Demo
 
-👉 [Live Demo](https://your-demo-link.com)
+👉 [Live Demo](https://virtualiphoneapp.netlify.app/)
 
 ## 📁 Project Structure
 
